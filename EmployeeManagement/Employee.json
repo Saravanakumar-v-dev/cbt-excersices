@@ -1,0 +1,32 @@
+[
+    {
+        "employee_id": 111,
+        "first_name": "Saravanakumar",
+        "last_name": "V",
+        "department": "IT",
+        "experience_of_employee": 1,
+        "phone_number": "2873790038",
+        "email_address": "Sarav@gmail.com",
+        "aadhar_number": "882772880000",
+        "pan_number": "KSJJS9938L",
+        "date_of_birth": "09-09-2002",
+        "nationality": "Indian",
+        "marital_status": "Single",
+        "type_of_employee": "Manager"
+    },
+    {
+        "employee_id": 112,
+        "first_name": "Saravanakumar",
+        "last_name": "Ve",
+        "department": "IBNS",
+        "experience_of_employee": 1,
+        "phone_number": "8827300922",
+        "email_address": "sarava@gmail.com",
+        "aadhar_number": "882277889922",
+        "pan_number": "SHMEE0938L",
+        "date_of_birth": "09-09-2002",
+        "nationality": "Indian",
+        "marital_status": "Single",
+        "type_of_employee": "Manager"
+    }
+]

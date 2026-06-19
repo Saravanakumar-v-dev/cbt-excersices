@@ -1,0 +1,18 @@
+{
+    "editor.inlineSuggest.edits.allowCodeShifting": "never",
+    "editor.inlineSuggest.edits.renderSideBySide": "never",
+    "editor.inlineSuggest.enabled": false,
+    "editor.inlineSuggest.suppressInSnippetMode": false,
+    "editor.inlineSuggest.syntaxHighlightingEnabled": false,
+    "editor.screenReaderAnnounceInlineSuggestion": false,
+    "editor.inlineSuggest.edits.showLongDistanceHint": false,
+    "geminicodeassist.inlineSuggestions.suggestionSpeed": "Slow",
+    "geminicodeassist.inlineSuggestions.enableAuto": false,
+    "intelliphp.inlineSuggestionsEnabled": false,
+    "editor.suggest.showInlineDetails": false,
+    "geminicodeassist.chat.changeView": "Default diff view",
+    "diffEditor.experimental.useTrueInlineView": false,
+    "editor.inlineCompletionsAccessibilityVerbose": false,
+    "editor.inlineSuggest.edits.showCollapsed": true,
+    "diffEditor.useInlineViewWhenSpaceIsLimited": false
+}

@@ -4,10 +4,12 @@ class EmployeeManager
 {
 	private string $file_path = "Employee.json";
 	private $employees = [];
-	private const ALPHA_PATTERN = "/^[a-zA-Z\s'-]+$/";
-	private const PAN_PATTERN   = "/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/";
-	private const DOB_PATTERN   = "/^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-[0-9]{4}$/";
-	private const MAX_ATTEMPTS  = 3;
+	private const ALPHA_PATTERN  = "/^[a-zA-Z\s'-]+$/";
+	private const PAN_PATTERN    = "/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/";
+	private const DOB_PATTERN    = "/^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-[0-9]{4}$/";
+	private const PHONE_PATTERN  = "/^\d{10}$/";
+	private const AADHAR_PATTERN = "/^\d{12}$/";
+	private const MAX_ATTEMPTS   = 3;
 
 	/**
 	 * Constructor - initializes the file path and loads existing employees from the JSON file
@@ -16,33 +18,32 @@ class EmployeeManager
 	{
 		$this->loadExistingEmployees();
 	}
+
 	/**
-	 * Loads existing employee data from the JSON file and converts each record into an Employee object
+	 * Loads existing employee data from the JSON file and converts each record into an Employee object.
+	 * Employees are stored in an ID-keyed associative array for O(1) lookup.
 	 * @return void
 	 */
-	private function loadExistingEmployees():void
+	private function loadExistingEmployees(): void
 	{
 		$this->employees = [];
 		if (file_exists($this->file_path) && filesize($this->file_path) > 0) {
-			$content = file_get_contents($this->file_path);
+			$content    = file_get_contents($this->file_path);
 			$data_array = json_decode($content, true) ?? [];
-			// print_r($data_array);die;
 			foreach ($data_array as $data) {
-				$this->employees[] = Employee::fromArray($data);
+				$emp = Employee::fromArray($data);
+				$this->employees[$emp->getEmployeeId()] = $emp;
 			}
 		}
-
-		// print_r($this->employees);die;
 	}
+
 	/**
 	 * Starts the application flow and displays the system title
 	 * @return void
 	 */
-	public function run():void
+	public function run(): void
 	{
-		echo "\n";
-		echo "  Employee Management System\n";
-		echo "\n";
+		echo " \n\n Employee Management System\n";
 		$this->service();
 	}
 
@@ -50,7 +51,7 @@ class EmployeeManager
 	 * Displays the menu and handles user input in a loop until the user chooses to exit
 	 * @return void
 	 */
-	public function service():void
+	public function service(): void
 	{
 		$running = true;
 
@@ -88,12 +89,12 @@ class EmployeeManager
 	 * @param int $_max_attempts
 	 * @return int|null
 	 */
-	private function getValidChoice(int $_min,int $_max,int $_max_attempts = self::MAX_ATTEMPTS):int|null
+	private function getValidChoice(int $_min, int $_max, int $_max_attempts = self::MAX_ATTEMPTS): int|null
 	{
 		$attempts = 0;
 		while ($attempts < $_max_attempts) {
 			$choice = trim(readline("Enter the Choice From Above: "));
-			if (is_numeric($choice) && (int)$choice >= $_min && (int)$choice <= $_max) {
+			if (is_numeric($choice) && (int) $choice >= $_min && (int) $choice <= $_max) {
 				return (int) $choice;
 			}
 			$attempts++;
@@ -107,25 +108,26 @@ class EmployeeManager
 	}
 
 	/**
-	 * Asks for a valid number within a given range and returns null if maximum attempts exceeded
-	 * @param string $_prompt
-	 * @param int $_min
-	 * @param int $_max
-	 * @param int $_max_attempts
-	 * @return int|null
+	 * Unified required-input helper. Reads from stdin, validates with $_validator, and retries up to $_max_attempts.
+	 * Returns the trimmed input string on success, or null after exhausting all attempts.
+	 * @param string   $_prompt       Prompt shown to the user
+	 * @param callable $_validator    fn(string $input): bool — returns true if the input is valid
+	 * @param string   $_error        Error message shown on invalid input
+	 * @param int      $_max_attempts Maximum allowed attempts
+	 * @return string|null
 	 */
-	private function askForNumber(string $_prompt,int $_min,int $_max,int $_max_attempts = self::MAX_ATTEMPTS):int|null
+	private function askForInput(string $_prompt, callable $_validator, string $_error, int $_max_attempts = self::MAX_ATTEMPTS): string|null
 	{
 		$attempts = 0;
 		while ($attempts < $_max_attempts) {
 			$input = trim(readline($_prompt));
-			if (is_numeric($input) && (int) $input >= $_min && (int) $input <= $_max) {
-				return (int) $input;
+			if ($input !== '' && $_validator($input)) {
+				return $input;
 			}
 			$attempts++;
 			$remaining = $_max_attempts - $attempts;
 			if ($remaining > 0) {
-				echo "Invalid input! Please enter a number between $_min and $_max. Attempts left: $remaining\n";
+				echo $_error . " Attempts left: $remaining\n";
 			}
 		}
 		echo "\nExceeded maximum attempt limit ($attempts/$_max_attempts). Operation aborted.\n";
@@ -133,271 +135,73 @@ class EmployeeManager
 	}
 
 	/**
-	 * Asks for input matching a regex pattern and returns null if maximum attempts exceeded
-	 * @param string $_prompt
-	 * @param string $_pattern
-	 * @param string $_error_message
-	 * @param int $_max_attempts
-	 * @return string|null
+	 * Unified optional-input helper for update flows. Pressing Enter keeps the current value.
+	 * Returns the new value on success, $_current if skipped, or false after exhausting all attempts.
+	 * @param string     $_label        Field label shown alongside the current value
+	 * @param string|int $_current      Current value (shown in brackets)
+	 * @param callable   $_validator    fn(string $input): bool — returns true if the input is valid
+	 * @param string     $_error        Error message shown on invalid input
+	 * @param int        $_max_attempts Maximum allowed attempts
+	 * @return string|int|false
 	 */
-	private function askForPattern(string $_prompt,string $_pattern,string $_error_message,int $_max_attempts = self::MAX_ATTEMPTS):string|null
+	private function askForOptionalInput(string $_label, string|int $_current, callable $_validator, string $_error, int $_max_attempts = self::MAX_ATTEMPTS): string|int|false
 	{
 		$attempts = 0;
 		while ($attempts < $_max_attempts) {
-			$input = trim(readline($_prompt));
-			if ($input != "" && preg_match($_pattern, $input)) {
+			$input = trim(readline("$_label [$_current]: "));
+			if ($input === '') {
+				return $_current;
+			}
+			if ($_validator($input)) {
 				return $input;
 			}
 			$attempts++;
 			$remaining = $_max_attempts - $attempts;
 			if ($remaining > 0) {
-				echo $_error_message . " Attempts left: $remaining\n";
+				echo $_error . " Attempts left: $remaining\n";
 			}
 		}
-		echo "\nExceeded maximum attempt limit ($attempts/$_max_attempts). Operation aborted.\n";
-		return null;
+		echo "\nExceeded maximum attempt limit ($attempts/$_max_attempts). Update aborted.\n";
+		return false;
 	}
 
 	/**
-	 * Asks for input with an exact number of digits and returns null if maximum attempts exceeded
-	 * @param string $_prompt
-	 * @param int $_length
-	 * @param string $_error_message
-	 * @param int $_max_attempts
-	 * @return string|null
-	 */
-	private function askForDigits(string $_prompt,int $_length,string $_error_message,int $_max_attempts = self::MAX_ATTEMPTS):string|null
-	{
-		$attempts = 0;
-		while ($attempts < $_max_attempts) {
-			$input = trim(readline($_prompt));
-			if (is_numeric($input) && strlen($input) == $_length) {
-				return $input;
-			}
-			$attempts++;
-			$remaining = $_max_attempts - $attempts;
-			if ($remaining > 0) {
-				echo $_error_message . " Attempts left: $remaining\n";
-			}
-		}
-		echo "\nExceeded maximum attempt limit ($attempts/$_max_attempts). Operation aborted.\n";
-		return null;
-	}
-	/**
-	 * Asks for a valid email address and returns null if maximum attempts exceeded
-	 * @param string $_prompt
-	 * @param int $_max_attempts
-	 * @return string|null
-	 */
-	private function askForEmail(string $_prompt,int $_max_attempts = self::MAX_ATTEMPTS):string|null
-	{
-		$attempts = 0;
-		while ($attempts < $_max_attempts) {
-			$input = trim(readline($_prompt));
-			if (filter_var($input, FILTER_VALIDATE_EMAIL)) {
-				return $input;
-			}
-			$attempts++;
-			$remaining = $_max_attempts - $attempts;
-			if ($remaining > 0) {
-				echo "Enter a Valid Email Address. Attempts left: $remaining\n";
-			}
-		}
-		echo "\nExceeded maximum attempt limit ($attempts/$_max_attempts). Operation aborted.\n";
-		return null;
-	}
-	/**
-	 * Asks for optional pattern input during update, press Enter to keep current value
-	 * Returns the new value, the current value if skipped, or false if attempts exceeded
-	 * @param string $_label
-	 * @param string $_current_value
-	 * @param string $_pattern
-	 * @param string $_error_message
-	 * @param int $_max_attempts
-	 * @return string|false
-	 */
-	private function askForOptionalPattern(string $_label,string $_current_value,string $_pattern,string $_error_message,int $_max_attempts = self::MAX_ATTEMPTS):string|false
-	{
-		$attempts = 0;
-		while ($attempts < $_max_attempts) {
-			$input = trim(readline("$_label [$_current_value]: "));
-			if ($input === "") {
-				return $_current_value;
-			}
-			if (preg_match($_pattern, $input)) {
-				return $input;
-			}
-			$attempts++;
-			$remaining = $_max_attempts - $attempts;
-			if ($remaining > 0) {
-				echo $_error_message . " Attempts left: $remaining\n";
-			}
-		}
-		echo "\nExceeded maximum attempt limit ($attempts/$_max_attempts). Update aborted.\n";
-		return false;
-	}
-	/**
-	 * Asks for optional number input during update, press Enter to keep current value
-	 * Returns the new value, the current value if skipped, or false if attempts exceeded
-	 * @param string $_label
-	 * @param int $_current_value
-	 * @param int $_min
-	 * @param int $_max
-	 * @param int $_max_attempts
-	 * @return int|false
-	 */
-	private function askForOptionalNumber(string $_label,int $_current_value,int $_min,int $_max,int $_max_attempts = self::MAX_ATTEMPTS):int|false
-	{
-		$attempts = 0;
-		while ($attempts < $_max_attempts) {
-			$input = trim(readline("$_label [$_current_value]: "));
-			if ($input === "") {
-				return $_current_value;
-			}
-			if (is_numeric($input) && (int) $input >= $_min && (int) $input <= $_max) {
-				return (int) $input;
-			}
-			$attempts++;
-			$remaining = $_max_attempts - $attempts;
-			if ($remaining > 0) {
-				echo "Invalid input! Enter a number between $_min and $_max. Attempts left: $remaining\n";
-			}
-		}
-		echo "\nExceeded maximum attempt limit ($attempts/$_max_attempts). Update aborted.\n";
-		return false;
-	}
-	/**
-	 * Asks for optional digit input during update, press Enter to keep current value
-	 * Returns the new value, the current value if skipped, or false if attempts exceeded
-	 * @param string $_label
-	 * @param string $_current_value
-	 * @param int $_length
-	 * @param string $_error_message
-	 * @param int $_max_attempts
-	 * @return string|false
-	 */
-	private function askForOptionalDigits(string $_label,string $_current_value,int $_length,string $_error_message,int $_max_attempts = self::MAX_ATTEMPTS):string|false
-	{
-		$attempts = 0;
-		while ($attempts < $_max_attempts) {
-			$input = trim(readline("$_label [$_current_value]: "));
-			if ($input === "") {
-				return $_current_value;
-			}
-			if (is_numeric($input) && strlen($input) == $_length) {
-				return $input;
-			}
-			$attempts++;
-			$remaining = $_max_attempts - $attempts;
-			if ($remaining > 0) {
-				echo $_error_message . " Attempts left: $remaining\n";
-			}
-		}
-		echo "\nExceeded maximum attempt limit ($attempts/$_max_attempts). Update aborted.\n";
-		return false;
-	}
-	/**
-	 * Asks for optional email input during update, press Enter to keep current value
-	 * Returns the new value, the current value if skipped, or false if attempts exceeded
-	 * @param string $_label
-	 * @param string $_current_value
-	 * @param int $_max_attempts
-	 * @return string|false
-	 */
-	private function askForOptionalEmail(string $_label,string $_current_value,int $_max_attempts = self::MAX_ATTEMPTS):string|false
-	{
-		$attempts = 0;
-		while ($attempts < $_max_attempts) {
-			$input = trim(readline("$_label [$_current_value]: "));
-			if ($input === "") {
-				return $_current_value;
-			}
-			if (filter_var($input, FILTER_VALIDATE_EMAIL)) {
-				return $input;
-			}
-			$attempts++;
-			$remaining = $_max_attempts - $attempts;
-			if ($remaining > 0) {
-				echo "Enter a Valid Email Address. Attempts left: $remaining\n";
-			}
-		}
-		echo "\nExceeded maximum attempt limit ($attempts/$_max_attempts). Update aborted.\n";
-		return false;
-	}
-	/**
-	 * Checks if an employee ID already exists in the employees array
+	 * Returns true if an employee with the given ID already exists in the ID-keyed array
 	 * @param int $_id
 	 * @return bool
 	 */
-	private function isIdDuplicate(int $_id):bool
+	private function isIdDuplicate(int $_id): bool
 	{
-		foreach ($this->employees as $emp) {
-			if ($emp->getEmployeeId() == $_id) {
-				return true;
-			}
-		}
-		return false;
+		return isset($this->employees[$_id]);
 	}
 	/**
-	 * Checks if an employee name (first + last) already exists in the employees array
-	 * @param string $_first_name
-	 * @param string $_last_name
-	 * @param int|null $_exclude_index
+	 * Returns true if an email address already exists, optionally excluding one ID
+	 * @param string   $_email
+	 * @param int|null $_exclude_id  Employee ID to skip during the check (used during updates)
 	 * @return bool
 	 */
-	private function isNameDuplicate(string $_first_name,string $_last_name, $_exclude_index = null):bool
+	private function isEmailDuplicate(string $_email, int|null $_exclude_id = null): bool
 	{
-		foreach ($this->employees as $index => $emp) {
-			if ($_exclude_index !== null && $index == $_exclude_index) {
-				continue;
-			}
-			if (strtolower($emp->getFirstName()) == strtolower($_first_name) && strtolower($emp->getLastName()) == strtolower($_last_name)) {
-				return true;
-			}
-		}
-		return false;
+		$matches = array_filter(
+			$this->employees,
+			fn($emp) =>
+				($_exclude_id === null || $emp->getEmployeeId() !== $_exclude_id) &&
+				$emp->getEmailAddress() === $_email
+		);
+		return !empty($matches);
 	}
+
 	/**
-	 * Checks if an email address already exists in the employees array
-	 * @param string $_email
-	 * @param int|null $_exclude_index
-	 * @return bool
-	 */
-	private function isEmailDuplicate(string $_email,$_exclude_index = null):bool
-	{
-		foreach ($this->employees as $index => $emp) {
-			if ($_exclude_index !== null && $index == $_exclude_index) {
-				continue;
-			}
-			if ($emp->getEmailAddress() == $_email) {
-				return true;
-			}
-		}
-		return false;
-	}
-	/**
-	 * Finds the index of an employee by their ID in the employees array
-	 * @param int $_id
-	 * @return int|null
-	 */
-	private function findEmployeeIndexById(int $_id):int|null
-	{
-		foreach ($this->employees as $index => $emp) {
-			if ($emp->getEmployeeId() == $_id) {
-				return $index;
-			}
-		}
-		return null;
-	}
-	/**
-	 * Saves all Employee objects to the JSON file by converting each object to an array using toArray() and encoding to JSON
+	 * Saves all Employee objects to the JSON file.
+	 * Uses array_values() to re-index the ID-keyed array so the JSON is saved as an array, not an object.
 	 * @return void
 	 */
-	private function saveToJson() :void
+	private function saveToJson(): void
 	{
-		$json_string = json_encode($this->employees, JSON_PRETTY_PRINT);
+		$json_string = json_encode(array_values($this->employees), JSON_PRETTY_PRINT);
 		file_put_contents($this->file_path, $json_string);
 	}
+
 	/**
 	 * Displays a single employee's details in a formatted way using getter methods
 	 * @param Employee $_emp
@@ -414,29 +218,33 @@ class EmployeeManager
 		echo "Phone Number : " . $_emp->getPhoneNumber() . "\n";
 		echo "Email Address : " . $_emp->getEmailAddress() . "\n";
 		echo "Aadhar Number : " . $_emp->getAadharNumber() . "\n";
-		echo "PAN Number    : " . $_emp->getPanNumber() . "\n";
+		echo "PAN Number : " . $_emp->getPanNumber() . "\n";
 		echo "Date of Birth : " . $_emp->getDateOfBirth() . "\n";
-		echo "Nationality   : " . $_emp->getNationality() . "\n";
+		echo "Nationality : " . $_emp->getNationality() . "\n";
 		echo "Marital Status : " . $_emp->getMaritalStatus() . "\n";
 		echo "Type of Employee : " . $_emp->getTypeOfEmployee() . "\n";
 		echo "\n";
 	}
 	/**
-	 * Creates a new employee after validating all fields with retry limits
-	 * Validates ID uniqueness, name uniqueness, and all field formats
-	 * Adds the employee to the in-memory array and saves to JSON file
+	 * Creates a new employee after validating all fields with retry limits.
+	 * Validates ID uniqueness, name uniqueness, and all field formats.
+	 * Adds the employee to the ID-keyed in-memory array and saves to JSON.
 	 * @return void
 	 */
-	private function createEmployee():void
+	private function createEmployee(): void
 	{
 		echo "\n--- Create Employee ---\n";
 
-		$id = null;
+		// --- Employee ID (numeric range + uniqueness) ---
+		$id          = null;
 		$id_attempts = 0;
-		while ($id_attempts < self::MAX_ATTEMPTS) {
-			$id = $this->askForNumber("Enter Employee ID: ", 1, 9999999);
-			if ($id === null) return;
+		$id_validator = fn($v) => is_numeric($v) && (int) $v >= 1 && (int) $v <= 9999999;
 
+		while ($id_attempts < self::MAX_ATTEMPTS) {
+			$id_input = $this->askForInput("Enter Employee ID: ", $id_validator, "Please enter a number between 1 and 9999999.");
+			if ($id_input === null) return;
+
+			$id = (int) $id_input;
 			if ($this->isIdDuplicate($id)) {
 				$id_attempts++;
 				$remaining = self::MAX_ATTEMPTS - $id_attempts;
@@ -451,27 +259,23 @@ class EmployeeManager
 			}
 		}
 
-		$first_name = $this->askForPattern("Enter First Name: ", self::ALPHA_PATTERN, "Invalid. Enter the First Name in Alphabets.");
+		$first_name = $this->askForInput("Enter First Name: ", fn($v) => preg_match(self::ALPHA_PATTERN, $v), "Invalid. Enter the First Name in Alphabets.");
 		if ($first_name === null) return;
 
-		$last_name = $this->askForPattern("Enter Last Name: ", self::ALPHA_PATTERN, "Invalid. Please Enter a Valid Last Name.");
+		$last_name = $this->askForInput("Enter Last Name: ", fn($v) => preg_match(self::ALPHA_PATTERN, $v), "Invalid. Please Enter a Valid Last Name.");
 		if ($last_name === null) return;
 
-		if ($this->isNameDuplicate($first_name, $last_name)) {
-			echo "\nEmployee name already exists. Please enter another name.\n";
-			return;
-		}
-
-		$department_name = $this->askForPattern("Enter Department: ", self::ALPHA_PATTERN, "Enter a Valid Department.");
+		$department_name = $this->askForInput("Enter Department: ", fn($v) => preg_match(self::ALPHA_PATTERN, $v), "Enter a Valid Department.");
 		if ($department_name === null) return;
 
-		$experience = $this->askForNumber("Enter Experience (in years): ", 0, 99);
-		if ($experience === null) return;
+		$exp_input = $this->askForInput("Enter Experience (in years): ", fn($v) => is_numeric($v) && (int) $v >= 0 && (int) $v <= 99, "Invalid input! Please enter a number between 0 and 99.");
+		if ($exp_input === null) return;
+		$experience = (int) $exp_input;
 
-		$phone_number = $this->askForDigits("Enter Phone Number: ", 10, "Please Enter a Valid 10-Digit Phone Number.");
+		$phone_number = $this->askForInput("Enter Phone Number: ", fn($v) => preg_match(self::PHONE_PATTERN, $v), "Please Enter a Valid 10-Digit Phone Number.");
 		if ($phone_number === null) return;
 
-		$email_address = $this->askForEmail("Enter Email Address: ");
+		$email_address = $this->askForInput("Enter Email Address: ", fn($v) => (bool) filter_var($v, FILTER_VALIDATE_EMAIL), "Enter a Valid Email Address.");
 		if ($email_address === null) return;
 
 		if ($this->isEmailDuplicate($email_address)) {
@@ -479,23 +283,23 @@ class EmployeeManager
 			return;
 		}
 
-		$aadhar_number = $this->askForDigits("Enter Aadhar Number: ", 12, "Enter a Valid 12-Digit Aadhar Number.");
+		$aadhar_number = $this->askForInput("Enter Aadhar Number: ", fn($v) => preg_match(self::AADHAR_PATTERN, $v), "Enter a Valid 12-Digit Aadhar Number.");
 		if ($aadhar_number === null) return;
 
-		$pan_input = $this->askForPattern("Enter PAN Number: ", self::PAN_PATTERN, "Enter a Valid PAN Number (e.g. ABCDE1234F).");
+		$pan_input = $this->askForInput("Enter PAN Number: ", fn($v) => preg_match(self::PAN_PATTERN, $v), "Enter a Valid PAN Number (e.g. ABCDE1234F).");
 		if ($pan_input === null) return;
 		$pan_number = strtoupper($pan_input);
 
-		$date_of_birth = $this->askForPattern("Enter Date of Birth (DD-MM-YYYY): ", self::DOB_PATTERN, "Enter a Valid Date Of Birth.");
+		$date_of_birth = $this->askForInput("Enter Date of Birth (DD-MM-YYYY): ", fn($v) => preg_match(self::DOB_PATTERN, $v), "Enter a Valid Date Of Birth.");
 		if ($date_of_birth === null) return;
 
-		$nationality = $this->askForPattern("Enter Nationality: ", self::ALPHA_PATTERN, "Enter a Valid Nationality.");
+		$nationality = $this->askForInput("Enter Nationality: ", fn($v) => preg_match(self::ALPHA_PATTERN, $v), "Enter a Valid Nationality.");
 		if ($nationality === null) return;
 
-		$marital_status = $this->askForPattern("Enter Marital Status: ", self::ALPHA_PATTERN, "Enter a Valid Marital Status.");
+		$marital_status = $this->askForInput("Enter Marital Status: ", fn($v) => preg_match(self::ALPHA_PATTERN, $v), "Enter a Valid Marital Status.");
 		if ($marital_status === null) return;
 
-		$type_of_employee = $this->askForPattern("Enter Type of Employee: ", self::ALPHA_PATTERN, "Enter a Valid Type of Employee.");
+		$type_of_employee = $this->askForInput("Enter Type of Employee: ", fn($v) => preg_match(self::ALPHA_PATTERN, $v), "Enter a Valid Type of Employee.");
 		if ($type_of_employee === null) return;
 
 		$new_employee = new Employee(
@@ -514,30 +318,27 @@ class EmployeeManager
 			$type_of_employee
 		);
 
-		$this->employees[] = $new_employee;
+		$this->employees[$id] = $new_employee;
 		$this->saveToJson();
-
 		echo "\nEmployee created successfully!\n";
 	}
-
 	/**
 	 * Displays the view submenu to view all employees or search by ID
 	 * @return void
 	 */
-	private function viewEmployees():void
+	private function viewEmployees(): void
 	{
 		echo "\n--- View Employees ---\n";
-
 		if (empty($this->employees)) {
 			echo "\nNo employees found.\n";
 			return;
 		}
-
 		echo "\n1. View All Employees\n";
 		echo "2. Search Employee by ID\n";
 
 		$choice = $this->getValidChoice(1, 2);
-		if ($choice === null) return;
+		if ($choice === null)
+			return;
 
 		if ($choice == 1) {
 			$this->viewAllEmployees();
@@ -545,213 +346,180 @@ class EmployeeManager
 			$this->searchEmployeeById();
 		}
 	}
-
 	/**
 	 * Displays all employees from the in-memory array with total count
 	 * @return void
 	 */
-	private function viewAllEmployees():void
+	private function viewAllEmployees(): void
 	{
 		echo "\n--- All Employees ---\n";
 		echo "Total Employees: " . count($this->employees) . "\n";
 
-		foreach ($this->employees as $emp) {
-			$this->displayEmployee($emp);
+		foreach ($this->employees as $employee) {
+			$this->displayEmployee($employee);
 		}
 	}
-
 	/**
-	 * Searches for a specific employee by ID and displays their details
+	 * Searches for a specific employee by ID and displays their details.
+	 * Uses direct O(1) array access on the ID-keyed employees array.
 	 * @return void
 	 */
-	private function searchEmployeeById():void
+	private function searchEmployeeById(): void
 	{
-		$search_id = $this->askForNumber("\nEnter Employee ID to Search: ", 1, 9999999);
-		if ($search_id === null) return;
-
-		$found_index = $this->findEmployeeIndexById($search_id);
-		if ($found_index === null) {
+		$search_input = $this->askForInput(
+			"\nEnter Employee ID to Search: ",
+			fn($v) => is_numeric($v) && (int) $v >= 1 && (int) $v <= 9999999,
+			"Please enter a valid numeric ID between 1 and 9999999."
+		);
+		if ($search_input === null) return;
+		$search_id = (int) $search_input;
+		if (!isset($this->employees[$search_id])) {
 			echo "\nEmployee with ID $search_id not found.\n";
 			return;
 		}
 		echo "\nEmployee Details Found:\n";
-		$this->displayEmployee($this->employees[$found_index]);
+		$this->displayEmployee($this->employees[$search_id]);
 	}
-
 	/**
-	 * Returns the field definitions array used for update validation
-	 * Each entry defines the label, getter, setter, validation type, and validation parameters
+	 * Returns the field definitions array used for update validation.
+	 * Each entry defines the label, getter, setter, a validator callable, and an error message.
+	 * An optional 'transform' key applies a string function (e.g. strtoupper) to the accepted value.
+	 * An optional 'cast' key casts the accepted string value to a target type (e.g. 'int').
 	 * @return array
 	 */
 	private function getUpdateFieldDefinitions(): array
-{
-	return [
-		[
-			'label'   => 'First Name',
-			'getter'  => 'getFirstName',
-			'setter'  => 'setFirstName',
-			'type'    => 'pattern',
-			'pattern' => self::ALPHA_PATTERN,
-			'error'   => 'Invalid. Enter the First Name in Alphabets.',
-		],
-		[
-			'label'   => 'Last Name',
-			'getter'  => 'getLastName',
-			'setter'  => 'setLastName',
-			'type'    => 'pattern',
-			'pattern' => self::ALPHA_PATTERN,
-			'error'   => 'Invalid. Please Enter a Valid Last Name.',
-		],
-		[
-			'label'   => 'Department',
-			'getter'  => 'getDepartment',
-			'setter'  => 'setDepartment',
-			'type'    => 'pattern',
-			'pattern' => self::ALPHA_PATTERN,
-			'error'   => 'Enter a Valid Department.',
-		],
-		[
-			'label'   => 'Experience (years)',
-			'getter'  => 'getExperienceOfEmployee',
-			'setter'  => 'setExperienceOfEmployee',
-			'type'    => 'number',
-			'min'     => 0,
-			'max'     => 99,
-		],
-		[
-			'label'   => 'Phone Number',
-			'getter'  => 'getPhoneNumber',
-			'setter'  => 'setPhoneNumber',
-			'type'    => 'digits',
-			'length'  => 10,
-			'error'   => 'Please Enter a Valid 10-Digit Phone Number.',
-		],
-		[
-			'label'   => 'Email Address',
-			'getter'  => 'getEmailAddress',
-			'setter'  => 'setEmailAddress',
-			'type'    => 'email',
-		],
-		[
-			'label'   => 'Aadhar Number',
-			'getter'  => 'getAadharNumber',
-			'setter'  => 'setAadharNumber',
-			'type'    => 'digits',
-			'length'  => 12,
-			'error'   => 'Enter a Valid 12-Digit Aadhar Number.',
-		],
-		[
-			'label'     => 'PAN Number',
-			'getter'    => 'getPanNumber',
-			'setter'    => 'setPanNumber',
-			'type'      => 'pattern',
-			'pattern'   => self::PAN_PATTERN,
-			'error'     => 'Enter a Valid PAN Number (e.g. ABCDE1234F).',
-			'transform' => 'strtoupper',
-		],
-		[
-			'label'   => 'Date of Birth (DD-MM-YYYY)',
-			'getter'  => 'getDateOfBirth',
-			'setter'  => 'setDateOfBirth',
-			'type'    => 'pattern',
-			'pattern' => self::DOB_PATTERN,
-			'error'   => 'Enter a Valid Date Of Birth.',
-		],
-		[
-			'label'   => 'Nationality',
-			'getter'  => 'getNationality',
-			'setter'  => 'setNationality',
-			'type'    => 'pattern',
-			'pattern' => self::ALPHA_PATTERN,
-			'error'   => 'Enter a Valid Nationality.',
-		],
-		[
-			'label'   => 'Marital Status',
-			'getter'  => 'getMaritalStatus',
-			'setter'  => 'setMaritalStatus',
-			'type'    => 'pattern',
-			'pattern' => self::ALPHA_PATTERN,
-			'error'   => 'Enter a Valid Marital Status.',
-		],
-		[
-			'label'   => 'Type of Employee',
-			'getter'  => 'getTypeOfEmployee',
-			'setter'  => 'setTypeOfEmployee',
-			'type'    => 'pattern',
-			'pattern' => self::ALPHA_PATTERN,
-			'error'   => 'Enter a Valid Type of Employee.',
-		],
-	];
-}
-
-
-	/**
-	 * Collects a single field's updated value using the appropriate optional input helper
-	 * Returns the new value, the current value if skipped, or false if attempts exceeded
-	 * @param array $_field_def
-	 * @param Employee $_employee
-	 * @return mixed
-	 */
-	private function collectUpdatedField(array $_field_def, Employee $_employee):mixed
 	{
-		$current_value = $_employee->{$_field_def['getter']}();
-
-		switch ($_field_def['type']) {
-			case 'pattern':
-				$result = $this->askForOptionalPattern($_field_def['label'], $current_value, $_field_def['pattern'], $_field_def['error']);
-				if ($result !== false && isset($_field_def['transform'])) {
-					$result = call_user_func($_field_def['transform'], $result);
-				}
-				return $result;
-			case 'number':
-				return $this->askForOptionalNumber($_field_def['label'], $current_value, $_field_def['min'], $_field_def['max']);
-			case 'digits':
-				return $this->askForOptionalDigits($_field_def['label'], $current_value, $_field_def['length'], $_field_def['error']);
-			case 'email':
-				return $this->askForOptionalEmail($_field_def['label'], $current_value);
-		}
-		return false;
+		return [
+			[
+				'label'     => 'First Name',
+				'getter'    => 'getFirstName',
+				'setter'    => 'setFirstName',
+				'validator' => fn($v) => preg_match(self::ALPHA_PATTERN, $v),
+				'error'     => 'Invalid. Enter the First Name in Alphabets.',
+			],
+			[
+				'label'     => 'Last Name',
+				'getter'    => 'getLastName',
+				'setter'    => 'setLastName',
+				'validator' => fn($v) => preg_match(self::ALPHA_PATTERN, $v),
+				'error'     => 'Invalid. Please Enter a Valid Last Name.',
+			],
+			[
+				'label'     => 'Department',
+				'getter'    => 'getDepartment',
+				'setter'    => 'setDepartment',
+				'validator' => fn($v) => preg_match(self::ALPHA_PATTERN, $v),
+				'error'     => 'Enter a Valid Department.',
+			],
+			[
+				'label'     => 'Experience (years)',
+				'getter'    => 'getExperienceOfEmployee',
+				'setter'    => 'setExperienceOfEmployee',
+				'validator' => fn($v) => is_numeric($v) && (int) $v >= 0 && (int) $v <= 99,
+				'error'     => 'Invalid input! Enter a number between 0 and 99.',
+				'cast'      => 'int',
+			],
+			[
+				'label'     => 'Phone Number',
+				'getter'    => 'getPhoneNumber',
+				'setter'    => 'setPhoneNumber',
+				'validator' => fn($v) => preg_match(self::PHONE_PATTERN, $v),
+				'error'     => 'Please Enter a Valid 10-Digit Phone Number.',
+			],
+			[
+				'label'     => 'Email Address',
+				'getter'    => 'getEmailAddress',
+				'setter'    => 'setEmailAddress',
+				'validator' => fn($v) => (bool) filter_var($v, FILTER_VALIDATE_EMAIL),
+				'error'     => 'Enter a Valid Email Address.',
+			],
+			[
+				'label'     => 'Aadhar Number',
+				'getter'    => 'getAadharNumber',
+				'setter'    => 'setAadharNumber',
+				'validator' => fn($v) => preg_match(self::AADHAR_PATTERN, $v),
+				'error'     => 'Enter a Valid 12-Digit Aadhar Number.',
+			],
+			[
+				'label'     => 'PAN Number',
+				'getter'    => 'getPanNumber',
+				'setter'    => 'setPanNumber',
+				'validator' => fn($v) => preg_match(self::PAN_PATTERN, $v),
+				'error'     => 'Enter a Valid PAN Number (e.g. ABCDE1234F).',
+				'transform' => 'strtoupper',
+			],
+			[
+				'label'     => 'Date of Birth (DD-MM-YYYY)',
+				'getter'    => 'getDateOfBirth',
+				'setter'    => 'setDateOfBirth',
+				'validator' => fn($v) => preg_match(self::DOB_PATTERN, $v),
+				'error'     => 'Enter a Valid Date Of Birth.',
+			],
+			[
+				'label'     => 'Nationality',
+				'getter'    => 'getNationality',
+				'setter'    => 'setNationality',
+				'validator' => fn($v) => preg_match(self::ALPHA_PATTERN, $v),
+				'error'     => 'Enter a Valid Nationality.',
+			],
+			[
+				'label'     => 'Marital Status',
+				'getter'    => 'getMaritalStatus',
+				'setter'    => 'setMaritalStatus',
+				'validator' => fn($v) => preg_match(self::ALPHA_PATTERN, $v),
+				'error'     => 'Enter a Valid Marital Status.',
+			],
+			[
+				'label'     => 'Type of Employee',
+				'getter'    => 'getTypeOfEmployee',
+				'setter'    => 'setTypeOfEmployee',
+				'validator' => fn($v) => preg_match(self::ALPHA_PATTERN, $v),
+				'error'     => 'Enter a Valid Type of Employee.',
+			],
+		];
 	}
-
 	/**
-	 * Updates an existing employee's details using a data-driven field definitions loop
-	 * Collects all field values, validates name and email uniqueness, then applies changes via setters
-	 * Press Enter to keep the current value for any field
+	 * Updates an existing employee's details using a data-driven field definitions loop.
+	 * Collects all field values via askForOptionalInput(), validates name and email uniqueness,
+	 * then applies changes through setters. Press Enter to keep the current value for any field.
 	 * @return void
 	 */
-	private function updateEmployee():void
+	private function updateEmployee(): void
 	{
 		echo "\n--- Update Employee ---\n";
 		if (empty($this->employees)) {
 			echo "\nNo employees found.\n";
 			return;
 		}
-		$target_id = $this->askForNumber("Enter Employee ID to update: ", 1, 9999999);
-		if ($target_id === null) return;
-		$found_index = $this->findEmployeeIndexById($target_id);
-		if ($found_index === null) {
+
+		$id_input = $this->askForInput(
+			"Enter Employee ID to update: ",
+			fn($v) => is_numeric($v) && (int) $v >= 1 && (int) $v <= 9999999,
+			"Please enter a valid numeric ID."
+		);
+		if ($id_input === null) return;
+		$target_id = (int) $id_input;
+		if (!isset($this->employees[$target_id])) {
 			echo "\nEmployee not found.\n";
 			return;
 		}
-		$employee = $this->employees[$found_index];
-		echo "\nCurrent Details:";
-		$this->displayEmployee($employee);
+		$employee = $this->employees[$target_id];
 		echo "\nEnter new values (press Enter to keep current value):\n";
+
 		$field_definitions = $this->getUpdateFieldDefinitions();
-		$updated_values = [];
+		$updated_values    = [];
+
 		foreach ($field_definitions as $field_def) {
-			$value = $this->collectUpdatedField($field_def, $employee);
-			if ($value === false) return;
-			$updated_values[$field_def['setter']] = $value;
-		}
-		if ($updated_values['setFirstName'] !== $employee->getFirstName() || $updated_values['setLastName'] !== $employee->getLastName()) {
-			if ($this->isNameDuplicate($updated_values['setFirstName'], $updated_values['setLastName'], $found_index)) {
-				echo "\nEmployee name already exists. Update cancelled.\n";
-				return;
+			$current_value = $employee->{$field_def['getter']}();
+			$result = $this->askForOptionalInput($field_def['label'], $current_value, $field_def['validator'], $field_def['error']);
+			if ($result === false) return;
+			if ($result !== $current_value && isset($field_def['transform'])) {
+				$result = call_user_func($field_def['transform'], $result);
 			}
+			$updated_values[$field_def['setter']] = $result;
 		}
 		if ($updated_values['setEmailAddress'] !== $employee->getEmailAddress()) {
-			if ($this->isEmailDuplicate($updated_values['setEmailAddress'], $found_index)) {
+			if ($this->isEmailDuplicate($updated_values['setEmailAddress'], $target_id)) {
 				echo "\nEmail address already exists. Update cancelled.\n";
 				return;
 			}
@@ -759,33 +527,38 @@ class EmployeeManager
 		foreach ($updated_values as $setter => $value) {
 			$employee->{$setter}($value);
 		}
-		$this->employees[$found_index] = $employee;
+		$this->employees[$target_id] = $employee;
 		$this->saveToJson();
+
 		echo "\nEmployee ID $target_id has been updated successfully!\n";
 		echo "\nUpdated Details:";
 		$this->displayEmployee($employee);
 	}
 
 	/**
-	 * Deletes an employee by ID after showing their details and asking for confirmation
-	 * Removes from the in-memory array and saves updated data to JSON file
+	 * Deletes an employee by ID after showing their details and asking for confirmation.
+	 * Removes the entry from the ID-keyed array via unset() and saves the updated data to JSON.
 	 * @return void
 	 */
-	private function deleteEmployee():void
+	private function deleteEmployee(): void
 	{
 		echo "\n--- Delete Employee ---\n";
 		if (empty($this->employees)) {
 			echo "\nNo employees found.\n";
 			return;
 		}
-		$target_id = $this->askForNumber("Enter Employee ID to delete: ", 1, 9999999);
-		if ($target_id === null) return;
-		$found_index = $this->findEmployeeIndexById($target_id);
-		if ($found_index === null) {
+		$id_input = $this->askForInput(
+			"Enter Employee ID to delete: ",
+			fn($v) => is_numeric($v) && (int) $v >= 1 && (int) $v <= 9999999,
+			"Please enter a valid numeric ID."
+		);
+		if ($id_input === null) return;
+		$target_id = (int) $id_input;
+		if (!isset($this->employees[$target_id])) {
 			echo "\nEmployee not found.\n";
 			return;
 		}
-		$employee = $this->employees[$found_index];
+		$employee = $this->employees[$target_id];
 		echo "\nEmployee details to be deleted:";
 		$this->displayEmployee($employee);
 		$confirm = strtolower(trim(readline("Are you sure you want to delete this employee? (yes/no): ")));
@@ -794,9 +567,9 @@ class EmployeeManager
 			return;
 		}
 		$deleted_name = $employee->getFirstName() . " " . $employee->getLastName();
-		array_splice($this->employees, $found_index, 1);
+		unset($this->employees[$target_id]);
 		$this->saveToJson();
-		echo "\nEmployee '" . $deleted_name . "' (ID: " . $target_id . ") deleted successfully!\n";
+		echo "\nEmployee '$deleted_name' (ID: $target_id) deleted successfully!\n";
 	}
 }
 ?>

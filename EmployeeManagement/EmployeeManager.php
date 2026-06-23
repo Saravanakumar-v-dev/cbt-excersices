@@ -234,8 +234,6 @@ class EmployeeManager
 	private function createEmployee(): void
 	{
 		echo "\n--- Create Employee ---\n";
-
-		// --- Employee ID (numeric range + uniqueness) ---
 		$id          = null;
 		$id_attempts = 0;
 		$id_validator = fn($v) => is_numeric($v) && (int) $v >= 1 && (int) $v <= 9999999;

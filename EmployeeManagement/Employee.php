@@ -1,7 +1,7 @@
 <?php
 class Employee implements JsonSerializable
 {
-	private int $employee_id;
+	public int $employee_id;
 	private string $first_name;
 	private string $last_name;
 	private string $department;
@@ -51,49 +51,56 @@ class Employee implements JsonSerializable
 	 * Returns the employee's unique ID
 	 * @return int
 	 */
-	public function getEmployeeId():int {
-		return $this->employee_id; 
+	public function getEmployeeId(): int
+	{
+		return $this->employee_id;
 	}
 	/**
 	 * Returns the employee's first name
 	 * @return string
 	 */
-	public function getFirstName():string {
-		return $this->first_name; 
+	public function getFirstName(): string
+	{
+		return $this->first_name;
 	}
 	/**
 	 * Returns the employee's last name
 	 * @return string
 	 */
-	public function getLastName():string { 
-		return $this->last_name; 
+	public function getLastName(): string
+	{
+		return $this->last_name;
 	}
 	/**
 	 * Returns the employee's department name
 	 * @return string
 	 */
-	public function getDepartment():string { 
-		return $this->department; 
+	public function getDepartment(): string
+	{
+		return $this->department;
 	}
 	/**
 	 * Returns the employee's years of experience
 	 * @return int
 	 */
-	public function getExperienceOfEmployee():int { 
-		return $this->experience_of_employee; 
+	public function getExperienceOfEmployee(): int
+	{
+		return $this->experience_of_employee;
 	}
 	/**
 	 * Returns the employee's phone number
 	 * @return string
 	 */
-	public function getPhoneNumber():string { 
-		return $this->phone_number; 
+	public function getPhoneNumber(): string
+	{
+		return $this->phone_number;
 	}
 	/**
 	 * Returns the employee's email address
 	 * @return string
 	 */
-	public function getEmailAddress():string { 
+	public function getEmailAddress(): string
+	{
 		return $this->email_address;
 	}
 
@@ -101,57 +108,64 @@ class Employee implements JsonSerializable
 	 * Returns the employee's Aadhar number
 	 * @return string
 	 */
-	public function getAadharNumber():string { 
-		return $this->aadhar_number; 
+	public function getAadharNumber(): string
+	{
+		return $this->aadhar_number;
 	}
 
 	/**
 	 * Returns the employee's PAN number
 	 * @return string
 	 */
-	public function getPanNumber():string { 
-		return $this->pan_number; 
+	public function getPanNumber(): string
+	{
+		return $this->pan_number;
 	}
 
 	/**
 	 * Returns the employee's date of birth
 	 * @return string
 	 */
-	public function getDateOfBirth():string { 
-		return $this->date_of_birth; 
+	public function getDateOfBirth(): string
+	{
+		return $this->date_of_birth;
 	}
 
 	/**
 	 * Returns the employee's nationality
 	 * @return string
 	 */
-	public function getNationality():string { 
-		return $this->nationality; 
+	public function getNationality(): string
+	{
+		return $this->nationality;
 	}
 
 	/**
 	 * Returns the employee's marital status
 	 * @return string
 	 */
-	public function getMaritalStatus():string { 
-		return $this->marital_status; 
-		}
+	public function getMaritalStatus(): string
+	{
+		return $this->marital_status;
+	}
 
 	/**
 	 * Returns the employee's type (e.g. Developer, Manager)
 	 * @return string
 	 */
-	public function getTypeOfEmployee():string { 
-		return $this->type_of_employee; 
-		}
+	public function getTypeOfEmployee(): string
+	{
+		return $this->type_of_employee;
+	}
 
 	/**
 	 * Sets the employee's unique ID
 	 * @param int $_employee_id
 	 * @return void
 	 */
-	public function setEmployeeId($_employee_id):void { 
-		$this->employee_id = $_employee_id; 
+	public function setEmployeeId($_employee_id): void
+	{
+		$this->employee_id = $_employee_id;
 	}
 
 	/**
@@ -159,8 +173,9 @@ class Employee implements JsonSerializable
 	 * @param string $_first_name
 	 * @return void
 	 */
-	public function setFirstName($_first_name):void { 
-		$this->first_name = $_first_name; 
+	public function setFirstName($_first_name): void
+	{
+		$this->first_name = $_first_name;
 	}
 
 	/**
@@ -168,8 +183,9 @@ class Employee implements JsonSerializable
 	 * @param string $_last_name
 	 * @return void
 	 */
-	public function setLastName($_last_name):void { 
-		$this->last_name = $_last_name; 
+	public function setLastName($_last_name): void
+	{
+		$this->last_name = $_last_name;
 	}
 
 	/**
@@ -177,8 +193,9 @@ class Employee implements JsonSerializable
 	 * @param string $_department
 	 * @return void
 	 */
-	public function setDepartment($_department):void { 
-		$this->department = $_department; 
+	public function setDepartment($_department): void
+	{
+		$this->department = $_department;
 	}
 
 	/**
@@ -186,8 +203,9 @@ class Employee implements JsonSerializable
 	 * @param int $_experience_of_employee
 	 * @return void
 	 */
-	public function setExperienceOfEmployee($_experience_of_employee):void { 
-		$this->experience_of_employee = $_experience_of_employee; 
+	public function setExperienceOfEmployee($_experience_of_employee): void
+	{
+		$this->experience_of_employee = $_experience_of_employee;
 	}
 
 	/**
@@ -195,8 +213,9 @@ class Employee implements JsonSerializable
 	 * @param string $_phone_number
 	 * @return void
 	 */
-	public function setPhoneNumber($_phone_number):void { 
-		$this->phone_number = $_phone_number; 
+	public function setPhoneNumber($_phone_number): void
+	{
+		$this->phone_number = $_phone_number;
 	}
 
 	/**
@@ -204,8 +223,9 @@ class Employee implements JsonSerializable
 	 * @param string $_email_address
 	 * @return void
 	 */
-	public function setEmailAddress($_email_address):void { 
-		$this->email_address = $_email_address; 
+	public function setEmailAddress($_email_address): void
+	{
+		$this->email_address = $_email_address;
 	}
 
 	/**
@@ -213,8 +233,9 @@ class Employee implements JsonSerializable
 	 * @param string $_aadhar_number
 	 * @return void
 	 */
-	public function setAadharNumber($_aadhar_number):void { 
-		$this->aadhar_number = $_aadhar_number; 
+	public function setAadharNumber($_aadhar_number): void
+	{
+		$this->aadhar_number = $_aadhar_number;
 	}
 
 	/**
@@ -222,8 +243,9 @@ class Employee implements JsonSerializable
 	 * @param string $_pan_number
 	 * @return void
 	 */
-	public function setPanNumber($_pan_number):void { 
-		$this->pan_number = $_pan_number; 
+	public function setPanNumber($_pan_number): void
+	{
+		$this->pan_number = $_pan_number;
 	}
 
 	/**
@@ -231,8 +253,9 @@ class Employee implements JsonSerializable
 	 * @param string $_date_of_birth
 	 * @return void
 	 */
-	public function setDateOfBirth($_date_of_birth):void { 
-		$this->date_of_birth = $_date_of_birth; 
+	public function setDateOfBirth($_date_of_birth): void
+	{
+		$this->date_of_birth = $_date_of_birth;
 	}
 
 	/**
@@ -240,8 +263,9 @@ class Employee implements JsonSerializable
 	 * @param string $_nationality
 	 * @return void
 	 */
-	public function setNationality($_nationality):void { 
-		$this->nationality = $_nationality; 
+	public function setNationality($_nationality): void
+	{
+		$this->nationality = $_nationality;
 	}
 
 	/**
@@ -249,8 +273,9 @@ class Employee implements JsonSerializable
 	 * @param string $_marital_status
 	 * @return void
 	 */
-	public function setMaritalStatus($_marital_status):void { 
-		$this->marital_status = $_marital_status; 
+	public function setMaritalStatus($_marital_status): void
+	{
+		$this->marital_status = $_marital_status;
 	}
 
 	/**
@@ -258,8 +283,9 @@ class Employee implements JsonSerializable
 	 * @param string $_type_of_employee
 	 * @return void
 	 */
-	public function setTypeOfEmployee($_type_of_employee):void { 
-		$this->type_of_employee = $_type_of_employee; 
+	public function setTypeOfEmployee($_type_of_employee): void
+	{
+		$this->type_of_employee = $_type_of_employee;
 	}
 
 	/**
@@ -290,7 +316,7 @@ class Employee implements JsonSerializable
 	 * Converts the Employee object into an associative array for JSON storage
 	 * @return array
 	 */
-	public function jsonSerialize():mixed
+	public function jsonSerialize(): array
 	{
 		return [
 			"employee_id" => $this->employee_id,
@@ -307,6 +333,24 @@ class Employee implements JsonSerializable
 			"marital_status" => $this->marital_status,
 			"type_of_employee" => $this->type_of_employee
 		];
+	}
+	public function displayEmployee($_employee): void
+	{
+		echo "\n\n";
+		echo "Employee ID : " . $_employee->getEmployeeId() . "\n";
+		echo "First Name : " . $_employee->getFirstName() . "\n";
+		echo "Last Name : " . $_employee->getLastName() . "\n";
+		echo "Department : " . $_employee->getDepartment() . "\n";
+		echo "Experience : " . $_employee->getExperienceOfEmployee() . " years\n";
+		echo "Phone Number : " . $_employee->getPhoneNumber() . "\n";
+		echo "Email Address : " . $_employee->getEmailAddress() . "\n";
+		echo "Aadhar Number : " . $_employee->getAadharNumber() . "\n";
+		echo "PAN Number : " . $_employee->getPanNumber() . "\n";
+		echo "Date of Birth : " . $_employee->getDateOfBirth() . "\n";
+		echo "Nationality : " . $_employee->getNationality() . "\n";
+		echo "Marital Status : " . $_employee->getMaritalStatus() . "\n";
+		echo "Type of Employee : " . $_employee->getTypeOfEmployee() . "\n";
+		echo "\n";
 	}
 }
 ?>

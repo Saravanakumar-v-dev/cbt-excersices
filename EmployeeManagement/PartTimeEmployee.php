@@ -55,5 +55,19 @@ class PartTimeEmployee extends Employee
         echo "Hourly Rate      : " . $this->hourly_rate . "\n";
         echo "Shift Type       : " . $this->shift_type . "\n\n";
     }
+
+    public function getHourlyRate(){
+        return $this->hourly_rate;
+    }
+    public function getShiftType(){
+        return $this->shift_type;
+    }
+
+    public function setHourlyRate($hourly_rate){
+        $this->hourly_rate = $hourly_rate;
+    }
+    public function setShiftType($shift_type){
+        $this->shift_type = $shift_type;
+    }
 }
 ?>

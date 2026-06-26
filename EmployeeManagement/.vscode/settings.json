@@ -14,5 +14,8 @@
     "diffEditor.experimental.useTrueInlineView": false,
     "editor.inlineCompletionsAccessibilityVerbose": false,
     "editor.inlineSuggest.edits.showCollapsed": true,
-    "diffEditor.useInlineViewWhenSpaceIsLimited": false
+    "diffEditor.useInlineViewWhenSpaceIsLimited": false,
+    "cSpell.words": [
+        "aadhar"
+    ]
 }

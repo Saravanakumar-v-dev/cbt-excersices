@@ -55,5 +55,17 @@ class FullTimeEmployee extends Employee
         echo "Salary : " . $this->salary . "\n";
         echo "Benefits : " . $this->benefits . "\n\n";
     }
+    public function getMonthlySalary(){
+        return $this->salary;
+    }
+    public function getBenefits(){
+        return $this->benefits;
+    }
+    public function setMonthlySalary($salary){
+        $this->salary = $salary;
+    }
+    public function setBenefits($benefits){
+        $this->benefits = $benefits;
+    }
 }
 ?>

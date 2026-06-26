@@ -22,50 +22,78 @@ function insertEmployee(?mysqli $conn, Employee $employee): bool
 	if ($conn === null) {
 		return false;
 	}
-	$employee_id = $conn->real_escape_string($employee->getEmployeeId());
-	$first_name = $conn->real_escape_string($employee->getFirstName());
-	$last_name = $conn->real_escape_string($employee->getLastName());
-	$department = $conn->real_escape_string($employee->getDepartment());
-	$experience = $conn->real_escape_string($employee->getExperienceOfEmployee());
-	$phone = $conn->real_escape_string($employee->getPhoneNumber());
-	$email = $conn->real_escape_string($employee->getEmailAddress());
-	$aadhar = $conn->real_escape_string($employee->getAadharNumber());
-	$pan = $conn->real_escape_string($employee->getPanNumber());
-	$dob = $conn->real_escape_string($employee->getDateOfBirth());
-	$nationality = $conn->real_escape_string($employee->getNationality());
-	$marital = $conn->real_escape_string($employee->getMaritalStatus());
-	$type = $conn->real_escape_string($employee->getTypeOfEmployee());
-	$salary = 'NULL';
-	$benefits = 'NULL';
-	$hourly = 'NULL';
-	$shift = 'NULL';
+
+	$employee_id   = $employee->getEmployeeId();
+	$first_name    = $employee->getFirstName();
+	$last_name     = $employee->getLastName();
+	$department    = $employee->getDepartment();
+	$experience    = $employee->getExperienceOfEmployee();
+	$phone_number  = $employee->getPhoneNumber();
+	$email_address = $employee->getEmailAddress();
+	$aadhar_number = $employee->getAadharNumber();
+	$pan_number    = $employee->getPanNumber();
+	$date_of_birth = $employee->getDateOfBirth();
+	$nationality   = $employee->getNationality();
+	$marital_status= $employee->getMaritalStatus();
+	$type_of_employee = $employee->getTypeOfEmployee();
+	
+	$salary   = null;
+	$benefits = null;
+	$hourly   = null;
+	$shift    = null;
 
 	if ($employee instanceof FullTimeEmployee) {
-		$salary = $conn->real_escape_string($employee->salary);
-		$benefits = "'" . $conn->real_escape_string($employee->benefits) . "'";
-		$salary = "'" . $salary . "'";
+		$salary   = $employee->salary;
+		$benefits = $employee->benefits;
 	} elseif ($employee instanceof PartTimeEmployee) {
-		$hourly = $conn->real_escape_string($employee->hourly_rate);
-		$shift = "'" . $conn->real_escape_string($employee->shift_type) . "'";
-		$hourly = "'" . $hourly . "'";
+		$hourly   = $employee->hourly_rate;
+		$shift    = $employee->shift_type;
 	}
+
 	$sql = "INSERT INTO employees 
 			(employee_id, first_name, last_name, department, experience_of_employee,
 			 phone_number, email_address, aadhar_number, pan_number, date_of_birth,
 			 nationality, marital_status, type_of_employee, salary, benefits, hourly_rate, shift_type)
 			VALUES 
-			('$employee_id', '$first_name', '$last_name', '$department', '$experience',
-			 '$phone', '$email', '$aadhar', '$pan', '$dob',
-			 '$nationality', '$marital', '$type', $salary, $benefits, $hourly, $shift)";
+			(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-	if ($conn->query($sql) === true) {
-		echo " Employee saved to MySQL database successfully.\n";
+	$stmt = $conn->prepare($sql);
+	if (!$stmt) {
+		echo "Prepare Failed: " . $conn->error . "\n";
+		return false;
+	}
+
+	$stmt->bind_param("isssissssssssisss",
+		$employee_id,
+		$first_name,
+		$last_name,
+		$department,
+		$experience,
+		$phone_number,
+		$email_address,
+		$aadhar_number,
+		$pan_number,
+		$date_of_birth,
+		$nationality,
+		$marital_status,
+		$type_of_employee,
+		$salary,
+		$benefits,
+		$hourly,
+		$shift
+	);
+
+	if ($stmt->execute()) {
+		echo "Employee saved to MySQL database successfully.\n";
+		$stmt->close();
 		return true;
 	} else {
-		echo "Error " . $conn->error . "\n";
+		echo "Error: " . $stmt->error . "\n";
+		$stmt->close();
 		return false;
 	}
 }
+
 function viewAllEmployee(?mysqli $conn, Employee $employee)
 {
 	if ($conn == null) {
@@ -89,14 +117,14 @@ function viewAllEmployee(?mysqli $conn, Employee $employee)
 			echo "Nationality :" . $row["nationality"] . "\n";
 			echo "Marital Status :" . $row["marital_status"] . "\n";
 			if ($row["type_of_employee"] == "Full Time") {
-					echo "\n------ Full Time Employee ------\n";
-					echo "Monthly Salary :" . $row["salary"] . "\n";
-					echo "Benefits :" . $row["benefits"] . "\n";
-				} else if ($row["type_of_employee"] == "Part Time") {
-					echo "\n------ Part Time Employee ------\n";
-					echo "Hourly Rate :" . $row["hourly_rate"] . "\n";
-					echo "Shift :" . $row["shift_type"] . "\n\n";
-				}
+				echo "\n------ Full Time Employee ------\n";
+				echo "Monthly Salary :" . $row["salary"] . "\n";
+				echo "Benefits :" . $row["benefits"] . "\n";
+			} else if ($row["type_of_employee"] == "Part Time") {
+				echo "\n------ Part Time Employee ------\n";
+				echo "Hourly Rate :" . $row["hourly_rate"] . "\n";
+				echo "Shift :" . $row["shift_type"] . "\n\n";
+			}
 
 		}
 	} else {
@@ -109,7 +137,7 @@ function viewEmployeeById(?mysqli $conn, int $id): bool
 		echo "\nMySQL connection is not available. Cannot search by ID.\n";
 		return false;
 	}
-	$sql = "SELECT * FROM employees WHERE id = ?";
+	$sql = "SELECT * FROM employees WHERE employee_id = ?";
 	$stmt = $conn->prepare($sql);
 	if ($stmt) {
 		$stmt->bind_param("i", $id);
@@ -157,7 +185,7 @@ function deleteEmployeeById(?mysqli $conn, int $id): bool
 		echo "\nMySQL connection is not available. Cannot delete by ID.\n";
 		return false;
 	}
-	$sql = "DELETE FROM employees WHERE id = ?";
+	$sql = "DELETE FROM employees WHERE employee_id = ?";
 	$stmt = $conn->prepare($sql);
 	if ($stmt) {
 		$stmt->bind_param("i", $id);
@@ -175,4 +203,93 @@ function deleteEmployeeById(?mysqli $conn, int $id): bool
 	}
 	return false;
 }
+function updateEmployee(?mysqli $conn, Employee $employee): bool
+{
+    if ($conn === null) {
+        return false;
+    }
+
+    $employee_id   = $employee->getEmployeeId();
+    $first_name    = $employee->getFirstName();
+    $last_name     = $employee->getLastName();
+    $department    = $employee->getDepartment();
+    $experience    = $employee->getExperienceOfEmployee();
+    $phone_number  = $employee->getPhoneNumber();
+    $email_address = $employee->getEmailAddress();
+    $aadhar_number = $employee->getAadharNumber();
+    $pan_number    = $employee->getPanNumber();
+    $date_of_birth = $employee->getDateOfBirth();
+    $nationality   = $employee->getNationality();
+    $marital_status = $employee->getMaritalStatus();
+    $type_of_employee = $employee->getTypeOfEmployee();
+
+    $salary   = null;
+    $benefits = null;
+    $hourly   = null;
+    $shift    = null;
+
+    if ($employee instanceof FullTimeEmployee) {
+        $salary   = $employee->salary;
+        $benefits = $employee->benefits;
+    } elseif ($employee instanceof PartTimeEmployee) {
+        $hourly   = $employee->hourly_rate;
+        $shift    = $employee->shift_type;
+    }
+
+    $sql = "UPDATE employees SET 
+            first_name = ?, 
+            last_name = ?, 
+            department = ?, 
+            experience_of_employee = ?, 
+            phone_number = ?, 
+            email_address = ?, 
+            aadhar_number = ?, 
+            pan_number = ?, 
+            date_of_birth = ?, 
+            nationality = ?, 
+            marital_status = ?, 
+            type_of_employee = ?, 
+            salary = ?, 
+            benefits = ?, 
+            hourly_rate = ?, 
+            shift_type = ?
+            WHERE employee_id = ?";
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        echo "Prepare failed: " . $conn->error . "\n";
+        return false;
+    }
+    $stmt->bind_param(
+        "sssisssssssssssss", 
+        $first_name, 
+        $last_name, 
+        $department, 
+        $experience, 
+        $phone_number, 
+        $email_address, 
+        $aadhar_number, 
+        $pan_number, 
+        $date_of_birth, 
+        $nationality, 
+        $marital_status, 
+        $type_of_employee, 
+        $salary, 
+        $benefits, 
+        $hourly, 
+        $shift,
+        $employee_id
+    );
+    if ($stmt->execute()) {
+        echo "Employee Data Updated to MySQL database successfully.\n";
+        $stmt->close();
+        return true;
+    } else {
+        echo "Execution Error: " . $stmt->error . "\n";
+        $stmt->close();
+        return false;
+    }
+}
+
+
 ?>

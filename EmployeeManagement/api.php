@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
 require_once 'Database.php';
@@ -20,27 +20,27 @@ function sendJsonResponse(int $status_code, array $data): void
 function buildEmployeeResponse(array $row): array
 {
 	$employee = [
-		'employee_id'            => (int) $row['employee_id'],
-		'first_name'             => $row['first_name'],
-		'last_name'              => $row['last_name'],
-		'department'             => $row['department'],
+		'employee_id' => (int) $row['employee_id'],
+		'first_name' => $row['first_name'],
+		'last_name' => $row['last_name'],
+		'department' => $row['department'],
 		'experience_of_employee' => (int) $row['experience_of_employee'],
-		'phone_number'           => $row['phone_number'],
-		'email_address'          => $row['email_address'],
-		'aadhar_number'          => $row['aadhar_number'],
-		'pan_number'             => $row['pan_number'],
-		'date_of_birth'          => $row['date_of_birth'],
-		'nationality'            => $row['nationality'],
-		'marital_status'         => $row['marital_status'],
-		'type_of_employee'       => $row['type_of_employee'],
+		'phone_number' => $row['phone_number'],
+		'email_address' => $row['email_address'],
+		'aadhar_number' => $row['aadhar_number'],
+		'pan_number' => $row['pan_number'],
+		'date_of_birth' => $row['date_of_birth'],
+		'nationality' => $row['nationality'],
+		'marital_status' => $row['marital_status'],
+		'type_of_employee' => $row['type_of_employee'],
 	];
 
 	if ($row['type_of_employee'] === 'Full Time') {
-		$employee['salary']   = $row['salary'] !== null ? (float) $row['salary'] : null;
+		$employee['salary'] = $row['salary'] !== null ? (float) $row['salary'] : null;
 		$employee['benefits'] = $row['benefits'] ?? null;
 	} elseif ($row['type_of_employee'] === 'Part Time') {
 		$employee['hourly_rate'] = $row['hourly_rate'] !== null ? (float) $row['hourly_rate'] : null;
-		$employee['shift_type']  = $row['shift_type'] ?? null;
+		$employee['shift_type'] = $row['shift_type'] ?? null;
 	}
 
 	return $employee;
@@ -59,7 +59,7 @@ $repository = new EmployeeRepository();
 
 if ($conn === null) {
 	sendJsonResponse(503, [
-		'status'  => 'error',
+		'status' => 'Service Unavailable',
 		'message' => 'Database connection unavailable. Please try again later.',
 	]);
 }
@@ -68,13 +68,16 @@ if ($method === 'GET') {
 	handleGet($conn, $repository);
 } elseif ($method === 'POST') {
 	handlePost($conn, $repository);
-} else{
+} elseif ($method === 'PUT') {
+	handlePut($conn,$repository);
+} elseif ($method === 'DELETE') {
+	handleDelete($conn, $repository);
+} else {
 	sendJsonResponse(405, [
-		'status'  => 'error',
+		'status' => 'Method Not allowed',
 		'message' => "Method '$method' is not allowed. Use GET or POST.",
 	]);
 }
-
 
 function handleGet(mysqli $conn, EmployeeRepository $repository): void
 {
@@ -83,7 +86,7 @@ function handleGet(mysqli $conn, EmployeeRepository $repository): void
 
 		if (!ctype_digit((string) $id) || (int) $id <= 0) {
 			sendJsonResponse(400, [
-				'status'  => 'error',
+				'status' => 'Bad request',
 				'message' => 'Invalid employee ID. Must be a positive integer.',
 			]);
 		}
@@ -95,37 +98,37 @@ function handleGet(mysqli $conn, EmployeeRepository $repository): void
 			$employee_data = buildEmployeeResponse($row);
 
 			sendJsonResponse(200, [
-				'status'  => 'success',
+				'status' => 'success',
 				'message' => 'Employee found.',
-				'data'    => $employee_data,
+				'data' => $employee_data,
 			]);
 		} else {
 			sendJsonResponse(404, [
-				'status'  => 'error',
+				'status' => 'Not Found',
 				'message' => "Employee with ID $employee_id not found.",
 			]);
 		}
 	} else {
-	    $rows = $repository->getAllEmployeesAsArray($conn);
+		$rows = $repository->getAllEmployeesAsArray($conn);
 
-	    if (!empty($rows)) {
-		    $employees = array_map('buildEmployeeResponse', $rows);
+		if (!empty($rows)) {
+			$employees = array_map('buildEmployeeResponse', $rows);
 
-		    sendJsonResponse(200, [
-			    'status'      => 'success',
-			    'message'     => 'Employees retrieved successfully.',
-			    'total_count' => count($employees),
-			    'data'        => $employees,
-		    ]);
-	    } else {
-		    sendJsonResponse(200, [
-			    'status'      => 'success',
-			    'message'     => 'No employees found.',
-			    'total_count' => 0,
-			    'data'        => [],
-		    ]);
-	    }
-    }
+			sendJsonResponse(200, [
+				'status' => 'success',
+				'message' => 'Employees retrieved successfully.',
+				'total_count' => count($employees),
+				'data' => $employees,
+			]);
+		} else {
+			sendJsonResponse(200, [
+				'status' => 'success',
+				'message' => 'No employees found.',
+				'total_count' => 0,
+				'data' => [],
+			]);
+		}
+	}
 }
 
 function handlePost(mysqli $conn, EmployeeRepository $repository): void
@@ -135,25 +138,8 @@ function handlePost(mysqli $conn, EmployeeRepository $repository): void
 
 	if ($data === null || empty($data)) {
 		sendJsonResponse(400, [
-			'status'  => 'error',
+			'status' => 'Bad request',
 			'message' => 'Invalid or empty JSON body. Please send a valid JSON object.',
-			'example' => [
-				'employee_id'            => 101,
-				'first_name'             => 'Saravanakumar',
-				'last_name'              => 'V',
-				'department'             => 'IT',
-				'experience_of_employee' => 3,
-				'phone_number'           => '9876543210',
-				'email_address'          => 'saravana@gmail.com',
-				'aadhar_number'          => '123456789012',
-				'pan_number'             => 'ABCDE1234F',
-				'date_of_birth'          => '15-06-1995',
-				'nationality'            => 'Indian',
-				'marital_status'         => 'Single',
-				'type_of_employee'       => 'Full Time',
-				'salary'                 => 50000,
-				'benefits'               => 'Health Insurance',
-			],
 		]);
 	}
 
@@ -182,16 +168,15 @@ function handlePost(mysqli $conn, EmployeeRepository $repository): void
 
 	if (!empty($missing_fields)) {
 		sendJsonResponse(400, [
-			'status'         => 'error',
-			'message'        => 'Missing required fields.',
+			'status' => 'Bad request',
+			'message' => 'Missing required fields.',
 			'missing_fields' => $missing_fields,
 		]);
 	}
-
 	$type = trim($data['type_of_employee']);
 	if ($type !== 'Full Time' && $type !== 'Part Time') {
 		sendJsonResponse(400, [
-			'status'  => 'error',
+			'status' => 'Bad request',
 			'message' => 'type_of_employee must be either "Full Time" or "Part Time".',
 		]);
 	}
@@ -199,14 +184,14 @@ function handlePost(mysqli $conn, EmployeeRepository $repository): void
 	if ($type === 'Full Time') {
 		if (!isset($data['salary']) || !isset($data['benefits'])) {
 			sendJsonResponse(400, [
-				'status'  => 'error',
+				'status' => 'Bad request',
 				'message' => 'Full Time employees require "salary" and "benefits" fields.',
 			]);
 		}
 	} else {
 		if (!isset($data['hourly_rate']) || !isset($data['shift_type'])) {
 			sendJsonResponse(400, [
-				'status'  => 'error',
+				'status' => 'Bad request',
 				'message' => 'Part Time employees require "hourly_rate" and "shift_type" fields.',
 			]);
 		}
@@ -215,7 +200,7 @@ function handlePost(mysqli $conn, EmployeeRepository $repository): void
 	$employee_id = $data['employee_id'];
 	if (!is_numeric($employee_id) || (int) $employee_id <= 0) {
 		sendJsonResponse(400, [
-			'status'  => 'error',
+			'status' => 'Bad request',
 			'message' => 'employee_id must be a positive integer.',
 		]);
 	}
@@ -223,7 +208,7 @@ function handlePost(mysqli $conn, EmployeeRepository $repository): void
 
 	if ($repository->employeeExists($conn, $employee_id)) {
 		sendJsonResponse(409, [
-			'status'  => 'error',
+			'status' => 'Conflict error',
 			'message' => "Employee with ID $employee_id already exists. Use a different ID.",
 		]);
 	}
@@ -265,22 +250,169 @@ function handlePost(mysqli $conn, EmployeeRepository $repository): void
 			trim($data['shift_type'])
 		);
 	}
-
-	ob_start();
 	$success = $repository->insertEmployee($conn, $employee);
-	ob_end_clean();
 
 	if ($success) {
 		sendJsonResponse(201, [
-			'status'  => 'success',
+			'status' => 'success',
 			'message' => "Employee with ID $employee_id created successfully.",
-			'data'    => $employee->jsonSerialize(),
+			'data' => $employee->jsonSerialize(),
 		]);
 	} else {
 		sendJsonResponse(500, [
-			'status'  => 'error',
+			'status' => 'Internal Server Error',
 			'message' => 'Failed to create employee. Database error occurred.',
 		]);
 	}
 }
+
+function handleDelete(mysqli $conn, EmployeeRepository $repository): void
+{
+	if (!isset($_GET['id'])) {
+		sendJsonResponse(400, [
+			'status' => 'Bad request',
+			'message' => 'Employee ID is required.',
+		]);
+	}
+	$id = $_GET['id'];
+	if (!ctype_digit((string) $id) || (int) $id <= 0) {
+		sendJsonResponse(400, [
+			'status' => 'Bad request',
+			'message' => 'Invalid employee ID. Must be a positive integer.',
+		]);
+	}
+	$employee_id = (int) $id;
+	$existing = $repository->getEmployeeByIdAsArray($conn, $employee_id);
+
+	if ($existing === null) {
+		sendJsonResponse(404, [
+			'status' => 'Not Found',
+			'message' => "Employee with ID $employee_id not found.",
+		]);
+	}
+	$deleted = $repository->deleteEmployeeById($conn, $employee_id);
+	if ($deleted) {
+		sendJsonResponse(200, [
+			'status' => 'success',
+			'message' => "Employee with ID $employee_id deleted successfully.",
+		]);
+	} else {
+		sendJsonResponse(500, [
+			'status' => 'Internal Server error',
+			'message' => 'Failed to delete employee. Please try again.',
+		]);
+	}
+}
+
+function handlePut(mysqli $conn, EmployeeRepository $repository)
+{
+	$raw_body = file_get_contents('php://input');
+	$data = json_decode($raw_body, true);
+
+	if ($data === null || empty($data)) {
+		sendJsonResponse(400, [
+			'status' => 'Bad Request',
+			'message' => 'Invalid or empty JSON body.'
+		]);
+	}
+
+	$id = $data['id'];
+
+	$employee = $repository->getEmployeeByIdAsArray($conn, $id);
+
+	if ($employee === null) {
+		sendJsonResponse(404, [
+			'status' => 'Not Found',
+			'message' => "Employee with ID $id not found."
+		]);
+	}
+
+	if (!isset($data['type_of_employee'])) {
+		sendJsonResponse(400, [
+			'status' => 'Bad Request',
+			'message' => 'type_of_employee is required.'
+		]);
+	}
+	$type = trim($data['type_of_employee']);
+	if ($type !== 'Full Time' && $type !== 'Part Time') {
+		sendJsonResponse(400, [
+			'status' => 'Bad Request',
+			'message' => 'type_of_employee must be either "Full Time" or "Part Time".'
+		]);
+	}
+	if ($type === 'Full Time') {
+		foreach (['salary', 'benefits'] as $field) {
+			if (!isset($data[$field])) {
+				sendJsonResponse(400, [
+					'status' => 'Bad Request',
+					'message' => "$field is required for Full Time employees."
+				]);
+			}
+		}
+		$updated_employee = new FullTimeEmployee(
+			$id,
+			trim($data['first_name']),
+			trim($data['last_name']),
+			trim($data['department']),
+			(int) $data['experience_of_employee'],
+			trim($data['phone_number']),
+			trim($data['email_address']),
+			trim($data['aadhar_number']),
+			strtoupper(trim($data['pan_number'])),
+			trim($data['date_of_birth']),
+			trim($data['nationality']),
+			trim($data['marital_status']),
+			'Full Time',
+			(float) $data['salary'],
+			trim($data['benefits'])
+		);
+	} else {
+		foreach (['hourly_rate', 'shift_type'] as $field) {
+			if (!isset($data[$field])) {
+				sendJsonResponse(400, [
+					'status' => 'Bad Request',
+					'message' => "$field is required for Part Time employees."
+				]);
+			}
+		}
+
+		if (!is_numeric($data['hourly_rate'])) {
+			sendJsonResponse(400, [
+				'status' => 'Bad Request',
+				'message' => 'hourly_rate must be numeric.'
+			]);
+		}
+
+		$updated_employee = new PartTimeEmployee(
+			$id,
+			trim($data['first_name']),
+			trim($data['last_name']),
+			trim($data['department']),
+			(int) $data['experience_of_employee'],
+			trim($data['phone_number']),
+			trim($data['email_address']),
+			trim($data['aadhar_number']),
+			strtoupper(trim($data['pan_number'])),
+			trim($data['date_of_birth']),
+			trim($data['nationality']),
+			trim($data['marital_status']),
+			'Part Time',
+			(float) $data['hourly_rate'],
+			trim($data['shift_type'])
+		);
+	}
+	$updated = $repository->updateEmployee($conn, $updated_employee);
+	if ($updated) {
+		sendJsonResponse(200, [
+			'status' => 'Success',
+			'message' => "Employee with ID $id updated successfully.",
+			'data' => $updated_employee->jsonSerialize()
+		]);
+	}
+	sendJsonResponse(500, [
+		'status' => 'Internal Server Error',
+		'message' => 'Failed to update employee.'
+	]);
+}
+
 ?>

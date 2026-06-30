@@ -42,7 +42,6 @@ function buildEmployeeResponse(array $row): array
 		$employee['hourly_rate'] = $row['hourly_rate'] !== null ? (float) $row['hourly_rate'] : null;
 		$employee['shift_type'] = $row['shift_type'] ?? null;
 	}
-
 	return $employee;
 }
 
@@ -142,7 +141,6 @@ function handlePost(mysqli $conn, EmployeeRepository $repository): void
 			'message' => 'Invalid or empty JSON body. Please send a valid JSON object.',
 		]);
 	}
-
 	$required_base_fields = [
 		'employee_id',
 		'first_name',
@@ -196,7 +194,6 @@ function handlePost(mysqli $conn, EmployeeRepository $repository): void
 			]);
 		}
 	}
-
 	$employee_id = $data['employee_id'];
 	if (!is_numeric($employee_id) || (int) $employee_id <= 0) {
 		sendJsonResponse(400, [
@@ -205,14 +202,12 @@ function handlePost(mysqli $conn, EmployeeRepository $repository): void
 		]);
 	}
 	$employee_id = (int) $employee_id;
-
 	if ($repository->employeeExists($conn, $employee_id)) {
 		sendJsonResponse(409, [
 			'status' => 'Conflict error',
 			'message' => "Employee with ID $employee_id already exists. Use a different ID.",
 		]);
 	}
-
 	if ($type === 'Full Time') {
 		$employee = new FullTimeEmployee(
 			$employee_id,
@@ -250,7 +245,7 @@ function handlePost(mysqli $conn, EmployeeRepository $repository): void
 			trim($data['shift_type'])
 		);
 	}
-	$success = $repository->insertEmployee($conn, $employee);
+	$success = $repository->insertEmployee($employee);
 
 	if ($success) {
 		sendJsonResponse(201, [
@@ -290,7 +285,7 @@ function handleDelete(mysqli $conn, EmployeeRepository $repository): void
 			'message' => "Employee with ID $employee_id not found.",
 		]);
 	}
-	$deleted = $repository->deleteEmployeeById($conn, $employee_id);
+	$deleted = $repository->deleteEmployee($employee_id);
 	if ($deleted) {
 		sendJsonResponse(200, [
 			'status' => 'success',
@@ -401,7 +396,7 @@ function handlePut(mysqli $conn, EmployeeRepository $repository)
 			trim($data['shift_type'])
 		);
 	}
-	$updated = $repository->updateEmployee($conn, $updated_employee);
+	$updated = $repository->updateEmployee($updated_employee);
 	if ($updated) {
 		sendJsonResponse(200, [
 			'status' => 'Success',

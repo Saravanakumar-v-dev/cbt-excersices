@@ -2,7 +2,7 @@
 require_once 'Employee.php';
 require_once 'FullTimeEmployee.php';
 require_once 'PartTimeEmployee.php';
-require_once 'db.php';
+require_once 'EmployeeRepository.php';
 
 
 class EmployeeManager
@@ -91,7 +91,6 @@ class EmployeeManager
 		echo " \n\n Employee Management System\n";
 		$this->service();
 	}
-
 	/**
 	 * Main menu loop
 	 * @return void

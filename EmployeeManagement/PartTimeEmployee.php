@@ -30,7 +30,7 @@ class PartTimeEmployee extends Employee
     {
         return new self(
             $_data['employee_id'], $_data['first_name'], $_data['last_name'],
-            $_data['department'], $_data['experience_of_employee'],
+            $_data['department_id'], $_data['experience_of_employee'],
             $_data['phone_number'], $_data['email_address'],
             $_data['aadhar_number'], $_data['pan_number'],
             $_data['date_of_birth'], $_data['nationality'],

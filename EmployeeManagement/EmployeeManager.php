@@ -2,18 +2,22 @@
 require_once 'Employee.php';
 require_once 'FullTimeEmployee.php';
 require_once 'PartTimeEmployee.php';
+require_once 'Database.php';
 require_once 'EmployeeRepository.php';
+require_once 'QueryHelper.php';
 
 
 class EmployeeManager
 {
 	private string $file_path = "Employee.json";
 	private $employees = [];
+	private ?mysqli $conn = null;
+	private EmployeeRepository $repository;
 	private const SALARY_PATTERN = '/^\d+(\s*-\s*\d+)?$/';
 	private const HOUR_RATE = '/\b\$?£?\d+(?:\.\d{2})?\s*(?:\/|per\s+)?(?:hr|hour)\b/i';
 	private const ALPHA_PATTERN = "/^[a-zA-Z\s'-]+$/";
 	private const PAN_PATTERN = "/^([a-zA-Z]){5}([0-9]){4}([a-zA-Z]){1}?$/";
-	private const DOB_PATTERN = "/^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-[0-9]{4}$/";
+	private const DOB_PATTERN = "/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|\d|3)$/";
 	private const PHONE_PATTERN = "/^\d{10}$/";
 	private const AADHAR_PATTERN = "/^\d{12}$/";
 	private const EMAIL_PATTERN = "/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/";
@@ -26,6 +30,9 @@ class EmployeeManager
 	 */
 	public function __construct()
 	{
+		$db = new Database();
+		$this->conn = $db->conn;
+		$this->repository = new EmployeeRepository();
 		$this->loadEmployeesFromDatabase();
 	}
 
@@ -59,7 +66,7 @@ class EmployeeManager
 	 */
 	private function loadEmployeesFromDatabase(): void
 	{
-		global $conn;
+		$conn = $this->conn;
 		$this->employees = [];
 		if ($conn === null) {
 			echo "\nDatabase connection not available. No employees loaded.\n";
@@ -91,6 +98,7 @@ class EmployeeManager
 		echo " \n\n Employee Management System\n";
 		$this->service();
 	}
+
 	/**
 	 * Main menu loop
 	 * @return void
@@ -122,7 +130,6 @@ class EmployeeManager
 			}
 		}
 	}
-
 	/**
 	 * Asks for a valid menu choice within a given range
 	 * @param int $_min
@@ -146,7 +153,6 @@ class EmployeeManager
 		echo "\nExceeded maximum attempt limit ($attempts/" . self::MAX_ATTEMPTS . "). Exiting...\n";
 		return null;
 	}
-
 	/**
 	 * Reads input with validation and retry
 	 * @param string $_prompt
@@ -171,7 +177,6 @@ class EmployeeManager
 		echo "\nExceeded maximum attempt limit ($attempts/" . self::MAX_ATTEMPTS . " ). Operation aborted.\n";
 		return null;
 	}
-
 	/**
 	 * Optional input for updates — press Enter to keep current value
 	 * @param string $_label
@@ -200,7 +205,6 @@ class EmployeeManager
 		echo "\nExceeded maximum attempt limit ($attempts/" . self::MAX_ATTEMPTS . "). Update aborted.\n";
 		return false;
 	}
-
 	/**
 	 * Checks if email already exists
 	 * @param string $_email
@@ -217,7 +221,6 @@ class EmployeeManager
 		);
 		return !empty($matches);
 	}
-
 	// /**
 	//  * Saves all employees to JSON file
 	//  * @return void
@@ -241,7 +244,7 @@ class EmployeeManager
 			echo "Employee ID      : " . $_employee->getEmployeeId() . "\n";
 			echo "First Name       : " . $_employee->getFirstName() . "\n";
 			echo "Last Name        : " . $_employee->getLastName() . "\n";
-			echo "Department       : " . $_employee->getDepartment() . "\n";
+			echo "Department       : " . $_employee->getDepartmentId() . "\n";
 			echo "Experience       : " . $_employee->getExperienceOfEmployee() . " years\n";
 			echo "Phone Number     : " . $_employee->getPhoneNumber() . "\n";
 			echo "Email Address    : " . $_employee->getEmailAddress() . "\n";
@@ -253,7 +256,6 @@ class EmployeeManager
 			echo "Type of Employee : " . $_employee->getTypeOfEmployee() . "\n\n";
 		}
 	}
-
 	/**
 	 * Creates a new employee — collects base fields, asks type, collects role fields,
 	 * saves to both JSON and MySQL
@@ -261,8 +263,7 @@ class EmployeeManager
 	 */
 	private function createEmployee(): void
 	{
-		global $conn;
-
+		$conn = $this->conn;
 		echo "\n--- Create Employee ---\n";
 		$employee_id = (int) $this->askForInput("Enter the Employee ID: ", self::EMPLOYEE_ID_PATTERN, "Please enter a valid numeric ID between 0 and 999999.");
 		if ($employee_id === 0 || isset($this->employees[$employee_id])) {
@@ -294,7 +295,6 @@ class EmployeeManager
 			}
 			$values[$field_definition['setter']] = $result;
 		}
-
 		if ($this->isEmailDuplicate($values['setEmailAddress'])) {
 			echo "\nEmail address already exists. Creation cancelled.\n";
 			return;
@@ -304,7 +304,7 @@ class EmployeeManager
 				$employee_id,
 				$values['setFirstName'],
 				$values['setLastName'],
-				$values['setDepartment'],
+				$values['setDepartmentId'],
 				(int) $values['setExperienceOfEmployee'],
 				$values['setPhoneNumber'],
 				$values['setEmailAddress'],
@@ -322,7 +322,7 @@ class EmployeeManager
 				$employee_id,
 				$values['setFirstName'],
 				$values['setLastName'],
-				$values['setDepartment'],
+				$values['setDepartmentId'],
 				(int) $values['setExperienceOfEmployee'],
 				$values['setPhoneNumber'],
 				$values['setEmailAddress'],
@@ -336,12 +336,10 @@ class EmployeeManager
 				$values['setShiftType']
 			);
 		}
-
 		$this->employees[$employee_id] = $employee;
-		insertEmployee($conn, $employee);
+		$this->repository->insertEmployee($employee);
 		echo "\nEmployee ID $employee_id has been created successfully!\n";
 	}
-
 	/**
 	 * View employees submenu
 	 * @return void
@@ -364,20 +362,18 @@ class EmployeeManager
 			$this->searchEmployeeById();
 		}
 	}
-
 	/**
 	 * Displays all employees
 	 * @return void
 	 */
 	private function viewAllEmployees(): void
 	{
-		global $conn;
+		$conn = $this->conn;
 		echo "\n--- All Employees ---\n";
 		echo "Total Employees: " . count($this->employees) . "\n";
 		foreach ($this->employees as $employee) {
 			$this->displayEmployee($employee);
 		}
-		viewAllEmployee($conn, $employee);
 	}
 	/**
 	 * Search employee by ID
@@ -385,22 +381,16 @@ class EmployeeManager
 	 */
 	private function searchEmployeeById(): void
 	{
-		global $conn;
+		$conn = $this->conn;
 		$search_input = $this->askForInput(
 			"\nEnter the ID to Search: ",
 			self::EMPLOYEE_ID_PATTERN,
 			"Please enter a valid numeric ID"
 		);
-		// if ($search_input === null) return;
-		// 	$search_id = (int) $search_input;
-		// 	if (!isset($this->employees[$search_id])) {
-		// 		echo "\nEmployee with ID $search_id not found.\n";
-		// 		return;
-		// 	}
 		if ($search_input === null)
 			return;
 		$search_id = (int) $search_input;
-		viewEmployeeById($conn, $search_id);
+		$this->repository->viewEmployeeById($search_id);
 	}
 	/**
 	 * Base field definitions for create/update (type is handled separately via menu)
@@ -411,7 +401,7 @@ class EmployeeManager
 		$input_fields = [
 			['label' => 'First Name', 'getter' => 'getFirstName', 'setter' => 'setFirstName', 'validator' => self::ALPHA_PATTERN, 'error' => 'Invalid. Enter the First Name in Alphabets.'],
 			['label' => 'Last Name', 'getter' => 'getLastName', 'setter' => 'setLastName', 'validator' => self::ALPHA_PATTERN, 'error' => 'Invalid. Please Enter a Valid Last Name.'],
-			['label' => 'Department', 'getter' => 'getDepartment', 'setter' => 'setDepartment', 'validator' => self::ALPHA_PATTERN, 'error' => 'Enter a Valid Department.'],
+			['label' => 'Department', 'getter' => 'getDepartmentId', 'setter' => 'setDepartmentId', 'validator' => self::ALPHA_PATTERN, 'error' => 'Enter a Valid Department.'],
 			['label' => 'Experience (years)', 'getter' => 'getExperienceOfEmployee', 'setter' => 'setExperienceOfEmployee', 'validator' => self::EXPERIENCE_PATTERN, 'error' => 'Invalid input! Enter a number between 0 and 99.', 'cast' => 'int'],
 			['label' => 'Phone Number', 'getter' => 'getPhoneNumber', 'setter' => 'setPhoneNumber', 'validator' => self::PHONE_PATTERN, 'error' => 'Please Enter a Valid 10-Digit Phone Number.'],
 			['label' => 'Email Address', 'getter' => 'getEmailAddress', 'setter' => 'setEmailAddress', 'validator' => self::EMAIL_PATTERN, 'error' => 'Enter a Valid Email Address.'],
@@ -420,9 +410,7 @@ class EmployeeManager
 			['label' => 'Date of Birth (DD-MM-YYYY)', 'getter' => 'getDateOfBirth', 'setter' => 'setDateOfBirth', 'validator' => self::DOB_PATTERN, 'error' => 'Enter a Valid Date Of Birth.'],
 			['label' => 'Nationality', 'getter' => 'getNationality', 'setter' => 'setNationality', 'validator' => self::ALPHA_PATTERN, 'error' => 'Enter a Valid Nationality.'],
 			['label' => 'Marital Status', 'getter' => 'getMaritalStatus', 'setter' => 'setMaritalStatus', 'validator' => self::ALPHA_PATTERN, 'error' => 'Enter a Valid Marital Status.'],
-
 		];
-
 		if ($_is_full_time_employee) {
 			$full_time_employee_input_field = [
 				['label' => 'Salary', 'getter' => 'getMonthlySalary', 'setter' => 'setMonthlySalary', 'validator' => self::SALARY_PATTERN, 'error' => 'Enter the Valid Salary'],
@@ -434,7 +422,6 @@ class EmployeeManager
 				['label' => 'Shift Type', 'getter' => 'getShiftType', 'setter' => 'setShiftType', 'validator' => self::ALPHA_PATTERN, 'error' => 'Enter the Correct Shift Type (Ex: Morning/Night)'],
 			];
 		}
-
 		return array_merge($input_fields, $full_time_employee_input_field);
 	}
 
@@ -444,7 +431,7 @@ class EmployeeManager
 	 */
 	private function updateEmployee(): void
 	{
-		global $conn;
+		$conn = $this->conn;
 		echo "\n--- Update Employee ---\n";
 		if (empty($this->employees)) {
 			echo "\nNo employees found.\n";
@@ -469,7 +456,6 @@ class EmployeeManager
 		foreach ($field_definitions as $field_def) {
 			$current_value = $employee->{$field_def['getter']}();
 			$result = $this->askForOptionalInput("Enter your " . $field_def['label'], $current_value, $field_def['validator'], $field_def['error']);
-
 			if ($result === false)
 				return;
 			if ($result !== $current_value && isset($field_def['transform'])) {
@@ -484,11 +470,9 @@ class EmployeeManager
 		foreach ($updated_values as $setter => $value) {
 			$employee->{$setter}($value);
 		}
-
 		$this->employees[$target_id] = $employee;
 		// $this->saveToJson(); 
-		updateEmployee($conn, $employee);
-
+		$this->repository->updateEmployee($employee,$target_id);
 		echo "\nEmployee ID $target_id has been updated successfully!\n\nUpdated Details:";
 		$this->displayEmployee($employee);
 	}
@@ -500,7 +484,7 @@ class EmployeeManager
 	 */
 	private function deleteEmployee(): void
 	{
-		global $conn;
+		$conn = $this->conn;
 		echo "\n--- Delete Employee ---\n";
 		if (empty($this->employees)) {
 			echo "\nNo employees found.\n";
@@ -523,7 +507,7 @@ class EmployeeManager
 			return;
 		}
 		// $deleted_name = $employee->getFirstName() . " " . $employee->getLastName();
-		deleteEmployeeById($conn, $target_id);
+		$this->repository->deleteEmployee($target_id);
 		// unset($this->employees[$target_id]);
 		// $this->saveToJson();
 		// echo "\nEmployee '$deleted_name' (ID: $target_id) deleted successfully!\n";

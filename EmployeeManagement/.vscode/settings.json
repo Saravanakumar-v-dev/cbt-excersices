@@ -1,6 +1,6 @@
 {
-    "editor.inlineSuggest.edits.allowCodeShifting": "never",
-    "editor.inlineSuggest.edits.renderSideBySide": "never",
+    "editor.inlineSuggest.edits.allowCodeShifting": "horizontal",
+    "editor.inlineSuggest.edits.renderSideBySide": "auto",
     "editor.inlineSuggest.enabled": false,
     "editor.inlineSuggest.suppressInSnippetMode": false,
     "editor.inlineSuggest.syntaxHighlightingEnabled": false,
@@ -11,11 +11,11 @@
     "intelliphp.inlineSuggestionsEnabled": false,
     "editor.suggest.showInlineDetails": false,
     "geminicodeassist.chat.changeView": "Default diff view",
-    "diffEditor.experimental.useTrueInlineView": false,
-    "editor.inlineCompletionsAccessibilityVerbose": false,
+    "diffEditor.experimental.useTrueInlineView": true,
+    "editor.inlineCompletionsAccessibilityVerbose": true,
     "editor.inlineSuggest.edits.showCollapsed": true,
-    "diffEditor.useInlineViewWhenSpaceIsLimited": false,
+    "diffEditor.useInlineViewWhenSpaceIsLimited": true,
     "cSpell.words": [
-        "aadhar"
+        "Aadhar"
     ]
 }

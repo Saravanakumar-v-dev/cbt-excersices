@@ -4,7 +4,7 @@ class Employee implements JsonSerializable
 	public int $employee_id;
 	private string $first_name;
 	private string $last_name;
-	private string $department;
+	private int $department_id;
 	private int $experience_of_employee;
 	private string $phone_number;
 	private string $email_address;
@@ -14,13 +14,14 @@ class Employee implements JsonSerializable
 	private string $nationality;
 	private string $marital_status;
 	private string $type_of_employee;
+	
 
 	/**
 	 * Constructor - creates an Employee with the given details
 	 * @param int $_employee_id
 	 * @param string $_first_name
 	 * @param string $_last_name
-	 * @param string $_department
+	 * @param int $_department_id
 	 * @param int $_experience_of_employee
 	 * @param string $_phone_number
 	 * @param string $_email_address
@@ -31,12 +32,12 @@ class Employee implements JsonSerializable
 	 * @param string $_marital_status
 	 * @param string $_type_of_employee
 	 */
-	public function __construct($_employee_id, $_first_name, $_last_name, $_department, $_experience_of_employee, $_phone_number, $_email_address, $_aadhar_number, $_pan_number, $_date_of_birth, $_nationality, $_marital_status, $_type_of_employee)
+	public function __construct($_employee_id, $_first_name, $_last_name, $_department_id, $_experience_of_employee, $_phone_number, $_email_address, $_aadhar_number, $_pan_number, $_date_of_birth, $_nationality, $_marital_status, $_type_of_employee)
 	{
 		$this->employee_id = $_employee_id;
 		$this->first_name = $_first_name;
 		$this->last_name = $_last_name;
-		$this->department = $_department;
+		$this->department_id = $_department_id;
 		$this->experience_of_employee = $_experience_of_employee;
 		$this->phone_number = $_phone_number;
 		$this->email_address = $_email_address;
@@ -47,6 +48,7 @@ class Employee implements JsonSerializable
 		$this->marital_status = $_marital_status;
 		$this->type_of_employee = $_type_of_employee;
 	}
+
 	/**
 	 * Returns the employee's unique ID
 	 * @return int
@@ -72,12 +74,12 @@ class Employee implements JsonSerializable
 		return $this->last_name;
 	}
 	/**
-	 * Returns the employee's department name
-	 * @return string
+	 * Returns the employee's department ID
+	 * @return int
 	 */
-	public function getDepartment(): string
+	public function getDepartmentId(): int
 	{
-		return $this->department;
+		return $this->department_id;
 	}
 	/**
 	 * Returns the employee's years of experience
@@ -189,13 +191,13 @@ class Employee implements JsonSerializable
 	}
 
 	/**
-	 * Sets the employee's department name
-	 * @param string $_department
+	 * Sets the employee's department ID
+	 * @param int $_department_id
 	 * @return void
 	 */
-	public function setDepartment($_department): void
+	public function setDepartmentId($_department_id): void
 	{
-		$this->department = $_department;
+		$this->department_id = $_department_id;
 	}
 
 	/**
@@ -299,7 +301,7 @@ class Employee implements JsonSerializable
 			$_data['employee_id'],
 			$_data['first_name'],
 			$_data['last_name'],
-			$_data['department'],
+			$_data['department_id'],
 			$_data['experience_of_employee'],
 			$_data['phone_number'],
 			$_data['email_address'],
@@ -322,7 +324,7 @@ class Employee implements JsonSerializable
 			"employee_id" => $this->employee_id,
 			"first_name" => $this->first_name,
 			"last_name" => $this->last_name,
-			"department" => $this->department,
+			"department_id" => $this->department_id,
 			"experience_of_employee" => $this->experience_of_employee,
 			"phone_number" => $this->phone_number,
 			"email_address" => $this->email_address,
@@ -340,7 +342,7 @@ class Employee implements JsonSerializable
 		echo "Employee ID : " . $_employee->getEmployeeId() . "\n";
 		echo "First Name : " . $_employee->getFirstName() . "\n";
 		echo "Last Name : " . $_employee->getLastName() . "\n";
-		echo "Department : " . $_employee->getDepartment() . "\n";
+		echo "Department : " . $_employee->getDepartmentId() . "\n";
 		echo "Experience : " . $_employee->getExperienceOfEmployee() . " years\n";
 		echo "Phone Number : " . $_employee->getPhoneNumber() . "\n";
 		echo "Email Address : " . $_employee->getEmailAddress() . "\n";

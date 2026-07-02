@@ -1,5 +1,5 @@
 <?php
-require_once 'Employee.php';
+require_once __DIR__ . '/Employee.php';
 
 /**
  * FullTimeEmployee - extends Employee with salary and benefits info

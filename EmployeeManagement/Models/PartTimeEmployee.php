@@ -1,5 +1,5 @@
 <?php
-require_once 'Employee.php';
+require_once __DIR__ . '/Employee.php';
 
 /**
  * PartTimeEmployee - extends Employee with hourly rate and shift info

@@ -1,10 +1,10 @@
 <?php
-require_once 'Employee.php';
-require_once 'FullTimeEmployee.php';
-require_once 'PartTimeEmployee.php';
-require_once 'Database.php';
-require_once 'EmployeeRepository.php';
-require_once 'QueryHelper.php';
+require_once __DIR__ . '/Models/Employee.php';
+require_once __DIR__ . '/Models/FullTimeEmployee.php';
+require_once __DIR__ . '/Models/PartTimeEmployee.php';
+require_once __DIR__ . '/Config/Database.php';
+require_once __DIR__ . '/Helpers/QueryHelper.php';
+require_once __DIR__ . '/Repository/EmployeeRepository.php';
 
 
 class EmployeeManager
